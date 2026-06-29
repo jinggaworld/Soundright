@@ -10,7 +10,7 @@ model Artist {
   id              String   @id @default(uuid())
   name            String
   email           String   @unique
-  walletAddress   String   @map("wallet_address")
+  walletAddress   String   @unique @map("wallet_address")
   spotifyArtistId String?  @map("spotify_artist_id")
   spotifyProfile  Json?    @map("spotify_profile")
   country         String?
