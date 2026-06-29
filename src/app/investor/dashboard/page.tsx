@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, TrendingUp, Music, DollarSign, ArrowUpRight } from "lucide-react";
+import { Wallet, TrendingUp, Music, DollarSign, ArrowUpRight, Coins, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useWallet } from "@/components/wallet/WalletProvider";
 
@@ -138,12 +138,32 @@ export default function InvestorDashboard() {
   );
 }
 
-function HoldingCard({ holding }: { holding: Holding }) {
+function HoldingCard({ holding, onClaimed }: { holding: Holding; onClaimed?: () => void }) {
   const { song, totalTokens, totalPaid, estimatedEarnings } = holding;
   const totalSupply = song.totalSupply || 1;
   const sharePercentage = ((totalTokens / totalSupply) * 100).toFixed(2);
   const roi =
     totalPaid > 0 ? ((estimatedEarnings / totalPaid) * 100).toFixed(1) : "0";
+  const [claiming, setClaiming] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(false);
+
+  async function handleClaim() {
+    setClaiming(true);
+    try {
+      const res = await fetch("/api/royalties/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songId: song.id }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setClaimSuccess(true);
+        onClaimed?.();
+      }
+    } finally {
+      setClaiming(false);
+    }
+  }
 
   return (
     <div className="card-sr">
@@ -171,12 +191,31 @@ function HoldingCard({ holding }: { holding: Holding }) {
             </span>
           </div>
         </div>
-        <Link
-          href={`/song/${song.id}`}
-          className="btn-pill flex shrink-0 items-center gap-1 text-xs"
-        >
-          View <ArrowUpRight size={12} />
-        </Link>
+        <div className="flex flex-col gap-2">
+          <Link
+            href={`/song/${song.id}`}
+            className="btn-pill flex items-center gap-1 text-xs"
+          >
+            View <ArrowUpRight size={12} />
+          </Link>
+          {estimatedEarnings > 0 && !claimSuccess && (
+            <button
+              onClick={handleClaim}
+              disabled={claiming}
+              className="btn-pill flex items-center gap-1 bg-sr-green/20 text-xs text-sr-green hover:bg-sr-green/30 disabled:opacity-50"
+            >
+              {claiming ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Coins size={12} />
+              )}
+              {claiming ? "Claiming..." : "Claim"}
+            </button>
+          )}
+          {claimSuccess && (
+            <span className="text-center text-xs text-sr-green">Claimed!</span>
+          )}
+        </div>
       </div>
 
       {/* Recent Distributions */}

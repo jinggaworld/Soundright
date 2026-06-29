@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
+import { Header } from "@/components/shared/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,7 +31,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-sr-black text-sr-text font-[family-name:var(--font-spotify)]">
-        <WalletProvider>{children}</WalletProvider>
+        <WalletProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+        </WalletProvider>
       </body>
     </html>
   );
