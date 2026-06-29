@@ -1,5 +1,7 @@
 "use client";
 
+import { BuyTokenWidget } from "@/components/song/BuyTokenWidget";
+
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   song: any;
@@ -70,28 +72,16 @@ export function OverviewTab({ song }: Props) {
         </p>
       </div>
 
-      {/* Purchase Widget Placeholder */}
-      <div className="rounded-lg border border-sr-border p-4">
-        <h3 className="mb-3 font-medium text-sr-text">Buy Tokens</h3>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min={1}
-            max={song.tokensForSale ?? 0}
-            defaultValue={1}
-            className="input-sr w-24"
-          />
-          <span className="text-sm text-sr-text-secondary">
-            × {song.pricePerTokenCspr ?? 0} CSPR
-          </span>
-          <button className="btn-pill ml-auto bg-sr-green text-black hover:bg-sr-green/80">
-            Purchase
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-sr-text-secondary">
-          Connect your CSPR.click wallet to purchase tokens
-        </p>
-      </div>
+      {/* Real Purchase Widget */}
+      <BuyTokenWidget
+        song={{
+          id: song.id,
+          title: song.title,
+          pricePerTokenCspr: song.pricePerTokenCspr,
+          tokensForSale: song.tokensForSale,
+          totalSupply: song.totalSupply,
+        }}
+      />
     </div>
   );
 }
