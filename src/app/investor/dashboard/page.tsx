@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, TrendingUp, Music, DollarSign, ArrowUpRight, Coins, Loader2 } from "lucide-react";
+import { Wallet, TrendingUp, Music, DollarSign, ArrowUpRight, Coins, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { RecommendationCard } from "@/components/ai/RecommendationCard";
 
 interface Holding {
   song: {
@@ -36,6 +37,7 @@ export default function InvestorDashboard() {
   const { address, isConnected } = useWallet();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState<Array<{ songId: string; title: string; artistName: string; reason: string; matchScore: number; predictedYield: number }>>([]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -47,13 +49,19 @@ export default function InvestorDashboard() {
 
   async function fetchHoldings() {
     try {
-      const res = await fetch("/api/tokens/my-holdings", {
-        headers: { "x-wallet-address": address! },
-      });
-      const result = await res.json();
-      if (result.success) {
-        setData(result.data);
-      }
+      const [holdingsRes, recsRes] = await Promise.all([
+        fetch("/api/tokens/my-holdings", {
+          headers: { "x-wallet-address": address! },
+        }),
+        fetch("/api/ai/recommendations", {
+          headers: { "x-wallet-address": address! },
+        }),
+      ]);
+      const holdingsResult = await holdingsRes.json();
+      if (holdingsResult.success) setData(holdingsResult.data);
+
+      const recsResult = await recsRes.json();
+      if (recsResult.success) setRecommendations(recsResult.data.recommendations);
     } finally {
       setLoading(false);
     }
@@ -117,6 +125,23 @@ export default function InvestorDashboard() {
             <HoldingCard key={holding.song.id} holding={holding} />
           ))}
         </div>
+
+        {/* AI Recommendations */}
+        {recommendations.length > 0 && (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <Sparkles size={18} className="text-sr-green" />
+              <h2 className="text-xl font-bold text-sr-text">
+                Recommended For You
+              </h2>
+            </div>
+            <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {recommendations.map((rec) => (
+                <RecommendationCard key={rec.songId} {...rec} />
+              ))}
+            </div>
+          </>
+        )}
 
         {data && data.holdings.length === 0 && (
           <div className="card-sr py-12 text-center">

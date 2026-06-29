@@ -13,6 +13,9 @@ import {
   Flag,
   Trash2,
   Loader2,
+  Activity,
+  Database,
+  Clock,
 } from "lucide-react";
 
 interface AdminStats {
@@ -38,10 +41,12 @@ export default function AdminPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [health, setHealth] = useState<{ db: string; uptime: string; apiLatency: string } | null>(null);
 
   useEffect(() => {
     fetchStats();
     fetchSongs();
+    fetchHealth();
   }, []);
 
   async function fetchStats() {
@@ -84,6 +89,23 @@ export default function AdminPage() {
       }
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function fetchHealth() {
+    try {
+      const start = Date.now();
+      const res = await fetch("/api/admin/stats", {
+        headers: { "x-admin-key": process.env.NEXT_PUBLIC_ADMIN_KEY || "" },
+      });
+      const latency = Date.now() - start;
+      setHealth({
+        db: res.ok ? "healthy" : "error",
+        uptime: "—",
+        apiLatency: `${latency}ms`,
+      });
+    } catch {
+      setHealth({ db: "error", uptime: "—", apiLatency: "timeout" });
     }
   }
 
@@ -160,6 +182,42 @@ export default function AdminPage() {
             value={`${(stats?.totalRoyaltyDistributed ?? 0).toFixed(2)} CSPR`}
             color="text-sr-green"
           />
+        </div>
+
+        {/* System Health */}
+        <h2 className="mb-4 text-xl font-bold text-sr-text">System Health</h2>
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="card-sr">
+            <div className="flex items-center gap-3">
+              <Database size={20} className={health?.db === "healthy" ? "text-sr-green" : "text-red-400"} />
+              <div>
+                <p className="text-sm text-sr-text-secondary">Database</p>
+                <p className={`font-bold ${health?.db === "healthy" ? "text-sr-green" : "text-red-400"}`}>
+                  {health?.db ?? "checking..."}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card-sr">
+            <div className="flex items-center gap-3">
+              <Activity size={20} className="text-sr-green" />
+              <div>
+                <p className="text-sm text-sr-text-secondary">API Latency</p>
+                <p className="font-bold text-sr-text">
+                  {health?.apiLatency ?? "..."}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card-sr">
+            <div className="flex items-center gap-3">
+              <Clock size={20} className="text-sr-green" />
+              <div>
+                <p className="text-sm text-sr-text-secondary">Uptime</p>
+                <p className="font-bold text-sr-text">{health?.uptime ?? "..."}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Songs Management */}
