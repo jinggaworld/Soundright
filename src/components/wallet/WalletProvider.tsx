@@ -14,6 +14,7 @@ interface WalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => void;
   signDeploy: (deploy: unknown) => Promise<unknown>;
+  signPayment: (args: { recipient: string; amount: number; nonce: string; deadline: string }) => Promise<unknown>;
   refreshBalance: () => Promise<void>;
 }
 
@@ -71,6 +72,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     return await csprclick.signDeploy(deploy);
   }, [state.address]);
 
+  const signPayment = useCallback(async (args: { recipient: string; amount: number; nonce: string; deadline: string }) => {
+    if (!state.address) throw new Error("Wallet not connected");
+    const csprclick = (window as any).csprclick;
+    if (!csprclick?.signPayment) throw new Error("CSPR.click wallet not found. Please install the extension.");
+    return await csprclick.signPayment(args);
+  }, [state.address]);
+
   const refreshBalance = useCallback(async () => {
     if (!state.address) return;
     const bal = await getBalance(state.address);
@@ -88,7 +96,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ ...state, connect, disconnect, signDeploy, refreshBalance }}
+      value={{ ...state, connect, disconnect, signDeploy, signPayment, refreshBalance }}
     >
       {children}
     </WalletContext.Provider>

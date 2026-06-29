@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function BuyTokenWidget({ song }: Props) {
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, signPayment } = useWallet();
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -50,13 +50,7 @@ export function BuyTokenWidget({ song }: Props) {
 
       if (challengeRes.status === 402 && challengeData.price) {
         // Step 2: Sign payment with CSPR.click wallet
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const csprclick = (window as any).csprclick as { signPayment?: (args: unknown) => Promise<unknown> } | undefined;
-        if (!csprclick?.signPayment) {
-          throw new Error("CSPR.click wallet not found. Please install the extension.");
-        }
-
-        const paymentProof = await csprclick.signPayment({
+        const paymentProof = await signPayment({
           recipient: challengeData.recipient,
           amount: challengeData.price,
           nonce: challengeData.nonce,

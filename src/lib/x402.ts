@@ -5,40 +5,49 @@
  * This module handles token purchases and royalty distributions.
  */
 
+interface PaymentSigner {
+  signPayment: (args: {
+    recipient: string;
+    amount: number;
+    nonce: string;
+    deadline: string;
+  }) => Promise<unknown>;
+}
+
 // Buy tokens via x402 payment challenge/response flow
 export async function buyTokensX402(
-  songContractAddress: string,
+  songId: string,
   tokenAmount: number,
-  pricePerTokenCSPR: number,
-  buyerAddress: string
+  buyerAddress: string,
+  signer: PaymentSigner
 ) {
-  // Step 1: Request payment challenge dari backend
+  // Step 1: Request payment challenge from backend
   const challengeResponse = await fetch("/api/tokens/buy", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ songContractAddress, tokenAmount, buyerAddress }),
+    body: JSON.stringify({ songId, tokenAmount, buyerAddress }),
   });
 
   if (challengeResponse.status === 402) {
     const { price, recipient, nonce, deadline } =
       await challengeResponse.json();
 
-    // Step 2: Sign payment authorization (via CSPR.click wallet)
-    const paymentProof = await (window as any).csprclick.signPayment({
+    // Step 2: Sign payment authorization via provided signer
+    const paymentProof = await signer.signPayment({
       recipient,
       amount: price,
       nonce,
       deadline,
     });
 
-    // Step 3: Submit dengan payment proof
+    // Step 3: Submit with payment proof
     const finalResponse = await fetch("/api/tokens/buy", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Payment": JSON.stringify(paymentProof),
       },
-      body: JSON.stringify({ songContractAddress, tokenAmount, buyerAddress }),
+      body: JSON.stringify({ songId, tokenAmount, buyerAddress }),
     });
 
     if (!finalResponse.ok) {
