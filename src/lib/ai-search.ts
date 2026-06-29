@@ -6,7 +6,7 @@ interface AvailableSong {
   artist?: { name: string } | null;
   royaltyRatePerMille?: number | null;
   pricePerTokenCspr?: number | null;
-  currentPlayCount?: bigint | null;
+  currentPlayCount?: number | null;
   status: string;
 }
 

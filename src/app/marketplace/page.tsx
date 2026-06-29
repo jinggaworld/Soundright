@@ -22,6 +22,7 @@ export default function MarketplacePage() {
   const [songs, setSongs] = useState<SongData[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -50,6 +51,40 @@ export default function MarketplacePage() {
     }
   }, [search, sortBy, page]);
 
+  async function handleAiSearch() {
+    if (!search.trim()) {
+      fetchSongs();
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: search }),
+      });
+      const result = await res.json();
+      if (result.success && result.data.matchingSongIds?.length > 0) {
+        const ids = result.data.matchingSongIds;
+        const songsRes = await fetch(`/api/songs?status=active&limit=50`);
+        const songsData = await songsRes.json();
+        if (songsData.success) {
+          const filtered = songsData.data.songs.filter((s: SongData) =>
+            ids.includes(s.id)
+          );
+          setSongs(filtered);
+          setTotalPages(1);
+        }
+      } else {
+        fetchSongs();
+      }
+    } catch {
+      fetchSongs();
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   useEffect(() => {
     fetchSongs();
   }, [fetchSongs]);
@@ -74,14 +109,24 @@ export default function MarketplacePage() {
             />
             <input
               type="text"
-              placeholder="Search songs or artists..."
+              placeholder="Search songs, artists, or try: 'high yield songs'"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAiSearch();
+              }}
               className="input-sr w-full pl-12"
             />
+            <button
+              onClick={handleAiSearch}
+              disabled={aiLoading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-sr-green/20 px-3 py-1 text-xs font-bold text-sr-green hover:bg-sr-green/30 disabled:opacity-50"
+            >
+              {aiLoading ? "AI..." : "AI Search"}
+            </button>
           </div>
 
           <select
