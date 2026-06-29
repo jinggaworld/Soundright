@@ -9,6 +9,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Shield,
+  Check,
+  Flag,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 interface AdminStats {
@@ -33,6 +37,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -48,6 +53,37 @@ export default function AdminPage() {
       if (result.success) setStats(result.data);
     } catch {
       // Stats fetch failed silently
+    }
+  }
+
+  async function handleSongAction(songId: string, action: "approve" | "flag" | "remove") {
+    if (action === "remove" && !confirm("Are you sure you want to remove this song?")) return;
+    setActionLoading(songId + action);
+    try {
+      const res = await fetch(`/api/admin/songs/${songId}/action`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": process.env.NEXT_PUBLIC_ADMIN_KEY || "",
+        },
+        body: JSON.stringify({ action }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        if (action === "remove") {
+          setSongs((prev) => prev.filter((s) => s.id !== songId));
+        } else {
+          setSongs((prev) =>
+            prev.map((s) =>
+              s.id === songId
+                ? { ...s, status: result.data.status, isVerified: result.data.isVerified }
+                : s
+            )
+          );
+        }
+      }
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -137,6 +173,7 @@ export default function AdminPage() {
                 <th className="pb-3">Status</th>
                 <th className="pb-3">Verified</th>
                 <th className="pb-3">Created</th>
+                <th className="pb-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -169,12 +206,56 @@ export default function AdminPage() {
                   <td className="py-3 text-sm text-sr-text-secondary">
                     {new Date(song.createdAt).toLocaleDateString()}
                   </td>
+                  <td className="py-3">
+                    <div className="flex items-center gap-1">
+                      {song.status !== "active" && (
+                        <button
+                          onClick={() => handleSongAction(song.id, "approve")}
+                          disabled={!!actionLoading}
+                          className="rounded p-1 text-sr-green hover:bg-sr-green/10 disabled:opacity-50"
+                          title="Approve"
+                        >
+                          {actionLoading === song.id + "approve" ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Check size={14} />
+                          )}
+                        </button>
+                      )}
+                      {song.status !== "flagged" && (
+                        <button
+                          onClick={() => handleSongAction(song.id, "flag")}
+                          disabled={!!actionLoading}
+                          className="rounded p-1 text-sr-warning hover:bg-sr-warning/10 disabled:opacity-50"
+                          title="Flag"
+                        >
+                          {actionLoading === song.id + "flag" ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Flag size={14} />
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleSongAction(song.id, "remove")}
+                        disabled={!!actionLoading}
+                        className="rounded p-1 text-red-400 hover:bg-red-400/10 disabled:opacity-50"
+                        title="Remove"
+                      >
+                        {actionLoading === song.id + "remove" ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {songs.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="py-8 text-center text-sr-text-secondary"
                   >
                     No songs found
