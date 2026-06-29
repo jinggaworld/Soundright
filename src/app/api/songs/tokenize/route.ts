@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import prisma from "@/lib/db";
+import { getTrackData, estimatePlayCountFromPopularity } from "@/lib/spotify";
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,9 +64,17 @@ export async function POST(req: NextRequest) {
       return errorResponse("This track has already been tokenized", 409);
     }
 
-    // Estimate play count from popularity (rough heuristic)
-    // In production, this would come from Spotify/Last.fm APIs
-    const estimatedPlays = 50000; // Default estimate — real value fetched via Spotify API
+    // Fetch real play count estimate from Spotify track data
+    let estimatedPlays = 0;
+    let trackTitle = title;
+    try {
+      const trackData = await getTrackData(spotifyTrackId);
+      estimatedPlays = estimatePlayCountFromPopularity(trackData.popularity || 0);
+      trackTitle = trackData.name || title;
+    } catch {
+      // If Spotify API fails, use 0 — never use fake data
+      console.warn(`Could not fetch Spotify data for track ${spotifyTrackId}`);
+    }
     const weeklyPlays = Math.round(estimatedPlays / 4);
 
     // Generate a compliance hash (SHA-256 of the tokenization parameters)

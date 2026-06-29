@@ -1,36 +1,8 @@
 import { NextRequest } from "next/server";
-import { getArtistProfile, getArtistTopTracks } from "@/lib/spotify";
+import { getArtistProfile, getArtistTopTracks, parseSpotifyArtistId } from "@/lib/spotify";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import prisma from "@/lib/db";
-
-/**
- * Extract Spotify Artist ID from a URL or raw ID string.
- * Accepts:
- *   - https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb
- *   - spotify:artist:4Z8W4fKeB5YxbusRsdQVPb
- *   - 4Z8W4fKeB5YxbusRsdQVPb (raw ID)
- */
-function parseSpotifyArtistId(input: string): string | null {
-  if (!input) return null;
-
-  // Raw ID: 22 alphanumeric chars
-  if (/^[0-9A-Za-z]{22}$/.test(input.trim())) {
-    return input.trim();
-  }
-
-  // URL format
-  const urlMatch = input.match(
-    /open\.spotify\.com\/artist\/([0-9A-Za-z]{22})/
-  );
-  if (urlMatch) return urlMatch[1];
-
-  // URI format
-  const uriMatch = input.match(/spotify:artist:([0-9A-Za-z]{22})/);
-  if (uriMatch) return uriMatch[1];
-
-  return null;
-}
 
 export async function POST(req: NextRequest) {
   try {
