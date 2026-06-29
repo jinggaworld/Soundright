@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Music, DollarSign, TrendingUp, Users } from "lucide-react";
+import { Music, DollarSign, TrendingUp, Users, Wallet } from "lucide-react";
 import Link from "next/link";
+import { useWallet } from "@/components/wallet/WalletProvider";
 import { PlayCountChart } from "@/components/charts/PlayCountChart";
 import { DistributionHistoryTable } from "@/components/shared/DistributionHistoryTable";
 import { DistributionCountdown } from "@/components/shared/DistributionCountdown";
+import { DashboardSkeleton } from "@/components/shared/DashboardSkeleton";
 
 interface SongData {
   id: string;
@@ -41,24 +43,36 @@ interface DashboardData {
 }
 
 export default function ArtistDashboard() {
+  const { address, isConnected } = useWallet();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
+    if (isConnected && address) {
+      fetchDashboard();
+    } else {
+      setLoading(false);
+    }
+  }, [isConnected, address]);
 
   async function fetchDashboard() {
     try {
-      // TODO: Get artist ID from session/wallet
-      const artistId = localStorage.getItem("artistId");
-      if (!artistId) {
-        setError("No artist account found. Please connect your wallet first.");
+      // Look up artist by wallet address
+      const lookupRes = await fetch(
+        `/api/artists/by-wallet/${encodeURIComponent(address!)}`
+      );
+      const lookupResult = await lookupRes.json();
+
+      if (!lookupResult.success || !lookupResult.data?.id) {
+        setError(
+          "No artist account found for this wallet. Please complete onboarding first."
+        );
         setLoading(false);
         return;
       }
 
+      const artistId = lookupResult.data.id;
       const res = await fetch(`/api/artists/${artistId}/dashboard`);
       const result = await res.json();
 
@@ -74,18 +88,38 @@ export default function ArtistDashboard() {
     }
   }
 
-  if (loading) {
+  if (!isConnected) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-sr-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-sr-green border-t-transparent" />
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-sr-black">
+        <div className="text-center">
+          <Wallet size={48} className="mx-auto mb-4 text-sr-text-secondary" />
+          <h2 className="text-xl font-bold text-sr-text">
+            Connect Your Wallet
+          </h2>
+          <p className="mt-2 text-sr-text-secondary">
+            Connect your CSPR wallet to view your artist dashboard
+          </p>
+        </div>
+      </main>
     );
+  }
+
+  if (loading) {
+    return <DashboardSkeleton />;
   }
 
   if (error || !data) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-sr-black">
-        <p className="text-sr-text-secondary">{error || "No data available"}</p>
+        <div className="text-center">
+          <p className="text-sr-text-secondary">{error || "No data available"}</p>
+          <Link
+            href="/artist/onboard"
+            className="btn-pill mt-4 inline-block bg-sr-green text-black hover:bg-sr-green/80"
+          >
+            Complete Onboarding
+          </Link>
+        </div>
       </div>
     );
   }
