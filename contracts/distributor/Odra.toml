@@ -1,0 +1,5 @@
+[project]
+name = "royalty-distributor"
+
+[[contracts]]
+fqn = "royalty_distributor::RoyaltyDistributor"

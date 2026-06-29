@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary Brand Colors */
+  --color-sr-green: #1ed760;
+  --color-sr-green-dark: #1db954;
+  --color-sr-black: #121212;
+  --color-sr-surface: #181818;
+  --color-sr-mid: #1f1f1f;
+  --color-sr-card: #252525;
+
+  /* Text Colors */
+  --color-sr-text: #ffffff;
+  --color-sr-text-secondary: #b3b3b3;
+  --color-sr-text-near: #cbcbcb;
+
+  /* Semantic Colors */
+  --color-sr-negative: #f3727f;
+  --color-sr-warning: #ffa42b;
+  --color-sr-announcement: #539df5;
+
+  /* Border Colors */
+  --color-sr-border: #4d4d4d;
+  --color-sr-border-light: #7c7c7c;
+  --color-sr-separator: #b3b3b3;
+
+  /* Font Family */
+  --font-spotify: "SpotifyMixUI", "CircularSp-Arab", "CircularSp-Hebr",
+    "CircularSp-Cyrl", "CircularSp-Grek", "CircularSp-Deva",
+    "Helvetica Neue", helvetica, arial, "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN", Meiryo, "MS Gothic", sans-serif;
+  --font-spotify-title: "SpotifyMixUITitle", "CircularSp-Arab",
+    "CircularSp-Hebr", "CircularSp-Cyrl", "CircularSp-Grek",
+    "CircularSp-Deva", "Helvetica Neue", helvetica, arial, sans-serif;
+
+  /* Border Radius */
+  --radius-pill: 500px;
+  --radius-full-pill: 9999px;
+}
+
+/* ==========================================
+   BASE STYLES
+   ========================================== */
+
+body {
+  background-color: var(--sr-black);
+  color: var(--text-base);
+  font-family: "SpotifyMixUI", "Helvetica Neue", helvetica, arial, sans-serif;
+}
+
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #535353;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #636363;
+}
+
+/* ==========================================
+   COMPONENT CLASSES
+   ========================================== */
+
+/* Pill Buttons */
+.btn-pill {
+  @apply rounded-full px-8 py-3 font-bold uppercase transition-all;
+  background-color: #1f1f1f;
+  color: #ffffff;
+  letter-spacing: 1.4px;
+  font-size: 0.875rem;
+}
+.btn-pill:hover {
+  background-color: #252525;
+  transform: scale(1.05);
+}
+.btn-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pill-green {
+  @apply rounded-full px-8 py-3 font-bold uppercase transition-all;
+  background-color: #1ed760;
+  color: #000000;
+  letter-spacing: 1.4px;
+  font-size: 0.875rem;
+}
+.btn-pill-green:hover {
+  background-color: #1db954;
+  transform: scale(1.05);
+}
+.btn-pill-green:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pill-outline {
+  @apply rounded-full px-8 py-3 font-bold uppercase transition-all;
+  background-color: transparent;
+  color: #ffffff;
+  border: 1px solid #7c7c7c;
+  letter-spacing: 1.4px;
+  font-size: 0.875rem;
+}
+.btn-pill-outline:hover {
+  background-color: #1f1f1f;
+}
+
+/* Cards */
+.card-sr {
+  background-color: #181818;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: box-shadow 0.2s ease;
+}
+.card-sr:hover {
+  box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px;
+}
+
+/* Inputs */
+.input-sr {
+  width: 100%;
+  border-radius: 500px;
+  background-color: #1f1f1f;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  box-shadow: rgb(18, 18, 18) 0px 1px 0px,
+    rgb(124, 124, 124) 0px 0px 0px 1px inset;
+  outline: none;
+  font-size: 0.875rem;
+}
+.input-sr::placeholder {
+  color: #b3b3b3;
+}
+.input-sr:focus {
+  box-shadow: rgb(18, 18, 18) 0px 1px 0px, rgb(0, 0, 0) 0px 0px 0px 1px inset;
+}
+
+/* Badges */
+.badge-sr {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}

@@ -1,0 +1,5 @@
+[project]
+name = "royalty-token"
+
+[[contracts]]
+fqn = "royalty_token::RoyaltyToken"

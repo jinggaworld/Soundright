@@ -1,0 +1,38 @@
+[package]
+name = "royalty-distributor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+odra = { version = "2.8.2", default-features = false }
+
+[dev-dependencies]
+odra-test = { version = "2.8.2", default-features = false }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "royalty_distributor_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "royalty_distributor_build_schema"
+path = "bin/build_schema.rs"
+test = false
+
+[[bin]]
+name = "royalty_distributor_cli"
+path = "bin/cli.rs"
+test = false
+
+[profile.release]
+opt-level = "z"
+lto = true
+debug = false
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+overflow-checks = false

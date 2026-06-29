@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Artist {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  walletAddress   String   @map("wallet_address")
+  spotifyArtistId String?  @map("spotify_artist_id")
+  spotifyProfile  Json?    @map("spotify_profile")
+  country         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  songs Song[]
+
+  @@map("artists")
+}
+
+model Song {
+  id                         String    @id @default(uuid())
+  artistId                   String    @map("artist_id")
+  title                      String
+  spotifyTrackId             String    @map("spotify_track_id")
+  isrcCode                   String?   @map("isrc_code")
+
+  // Token config
+  tokenContractAddress       String?   @map("token_contract_address")
+  distributorContractAddress String?   @map("distributor_contract_address")
+  oracleContractAddress      String?   @map("oracle_contract_address")
+  totalSupply                Int?      @map("total_supply")
+  tokensForSale              Int?      @map("tokens_for_sale")
+  pricePerTokenCspr          Decimal?  @map("price_per_token_cspr")
+  royaltyRatePerMille        Decimal?  @map("royalty_rate_per_mille")
+  distributionSchedule       String?   @default("weekly") @map("distribution_schedule")
+
+  // Stats
+  currentPlayCount           BigInt?   @map("current_play_count")
+  lastPlayCount              BigInt?   @map("last_play_count")
+  weeklyPlays                Int?      @map("weekly_plays")
+
+  // Compliance
+  complianceHash             String?   @map("compliance_hash")
+  isVerified                 Boolean   @default(false) @map("is_verified")
+
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  launchedAt  DateTime? @map("launched_at")
+
+  artist          Artist              @relation(fields: [artistId], references: [id])
+  holdings        TokenHolding[]
+  distributions   Distribution[]
+  playCountHistory PlayCountHistory[]
+
+  @@map("songs")
+}
+
+model TokenHolding {
+  id                String   @id @default(uuid())
+  songId            String   @map("song_id")
+  investorAddress   String   @map("investor_address")
+  tokenAmount       Int      @map("token_amount")
+  purchasePriceCspr Decimal  @map("purchase_price_cspr")
+  purchasedAt       DateTime @default(now()) @map("purchased_at")
+
+  song Song @relation(fields: [songId], references: [id])
+
+  @@map("token_holdings")
+}
+
+model Distribution {
+  id               String   @id @default(uuid())
+  songId           String   @map("song_id")
+  periodStart      DateTime @map("period_start")
+  periodEnd        DateTime @map("period_end")
+  totalPlays       Int      @map("total_plays")
+  totalRoyaltyUsd  Decimal  @map("total_royalty_usd")
+  totalRoyaltyCspr Decimal  @map("total_royalty_cspr")
+  aiReportHash     String?  @map("ai_report_hash")
+  txHash           String?  @map("tx_hash")
+  distributedAt    DateTime @default(now()) @map("distributed_at")
+
+  song Song @relation(fields: [songId], references: [id])
+
+  @@map("distributions")
+}
+
+model PlayCountHistory {
+  id         String   @id @default(uuid())
+  songId     String   @map("song_id")
+  playCount  BigInt   @map("play_count")
+  source     String
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  song Song @relation(fields: [songId], references: [id])
+
+  @@map("play_count_history")
+}
