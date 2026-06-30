@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { RecommendationCard } from "@/components/ai/RecommendationCard";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { InvestorSkeleton } from "@/components/shared/InvestorSkeleton";
 
 interface Holding {
   song: {
@@ -83,7 +84,7 @@ function InvestorDashboardContent() {
   }
 
   if (loading) {
-    return <InvestorDashboardSkeleton />;
+    return <InvestorSkeleton />;
   }
 
   return (
@@ -304,38 +305,4 @@ export default function InvestorDashboard() {
   );
 }
 
-function InvestorDashboardSkeleton() {
-  return (
-    <div className="min-h-screen bg-sr-black px-4 py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 h-9 w-48 animate-pulse rounded bg-sr-mid" />
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card-sr">
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 animate-pulse rounded bg-sr-mid" />
-                <div className="flex-1">
-                  <div className="mb-1 h-3 w-20 animate-pulse rounded bg-sr-mid" />
-                  <div className="h-5 w-24 animate-pulse rounded bg-sr-mid" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mb-4 h-6 w-32 animate-pulse rounded bg-sr-mid" />
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="card-sr mb-4">
-            <div className="flex items-start gap-4">
-              <div className="h-20 w-20 animate-pulse rounded-md bg-sr-mid" />
-              <div className="flex-1">
-                <div className="mb-1 h-4 w-40 animate-pulse rounded bg-sr-mid" />
-                <div className="mb-2 h-3 w-28 animate-pulse rounded bg-sr-mid" />
-                <div className="h-3 w-64 animate-pulse rounded bg-sr-mid" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+

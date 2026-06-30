@@ -17,6 +17,7 @@ import {
   Database,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { AdminSkeleton } from "@/components/shared/AdminSkeleton";
 
 interface AdminStats {
   totalArtists: number;
@@ -108,26 +109,7 @@ function AdminContent() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-sr-black px-4 py-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 h-9 w-32 animate-pulse rounded bg-sr-mid" />
-          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="card-sr">
-                <div className="flex items-center gap-3">
-                  <div className="h-5 w-5 animate-pulse rounded bg-sr-mid" />
-                  <div className="flex-1">
-                    <div className="mb-1 h-3 w-20 animate-pulse rounded bg-sr-mid" />
-                    <div className="h-5 w-24 animate-pulse rounded bg-sr-mid" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   return (
