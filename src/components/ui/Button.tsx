@@ -1,7 +1,19 @@
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
+/**
+ * Button component with multiple variants and sizes.
+ *
+ * @example
+ * ```tsx
+ * <Button variant="primary" size="md">Click me</Button>
+ * <Button variant="outline" size="sm">Cancel</Button>
+ * <Button variant="ghost" disabled>Disabled</Button>
+ * ```
+ */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  /** Visual style variant: primary (green), secondary (gray), outline (border), ghost (transparent) */
   variant?: "primary" | "secondary" | "outline" | "ghost";
+  /** Button size: sm (small), md (medium, default), lg (large) */
   size?: "sm" | "md" | "lg";
 }
 

@@ -64,17 +64,9 @@ export default function MarketplacePage() {
         body: JSON.stringify({ query: search }),
       });
       const result = await res.json();
-      if (result.success && result.data.matchingSongIds?.length > 0) {
-        const ids = result.data.matchingSongIds;
-        const songsRes = await fetch(`/api/songs?status=active&limit=50`);
-        const songsData = await songsRes.json();
-        if (songsData.success) {
-          const filtered = songsData.data.songs.filter((s: SongData) =>
-            ids.includes(s.id)
-          );
-          setSongs(filtered);
-          setTotalPages(1);
-        }
+      if (result.success && result.data.songs?.length > 0) {
+        setSongs(result.data.songs);
+        setTotalPages(1);
       } else {
         fetchSongs();
       }

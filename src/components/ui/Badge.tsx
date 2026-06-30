@@ -1,5 +1,18 @@
+/**
+ * Badge component for status indicators and labels.
+ *
+ * @example
+ * ```tsx
+ * <Badge variant="success">Active</Badge>
+ * <Badge variant="warning">Pending</Badge>
+ * <Badge variant="error">Failed</Badge>
+ * <Badge variant="info">New</Badge>
+ * ```
+ */
 interface BadgeProps {
+  /** Visual style variant based on status type */
   variant?: "default" | "success" | "warning" | "error" | "info";
+  /** Badge content */
   children: React.ReactNode;
 }
 

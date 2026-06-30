@@ -28,7 +28,7 @@ export async function enhanceSearch(
   const userPrompt = `
 User search query: "${query}"
 
-Available songs:
+Available songs (up to 10):
 ${JSON.stringify(
   availableSongs.slice(0, 10).map((s) => ({
     id: s.id,

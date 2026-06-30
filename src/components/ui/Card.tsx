@@ -1,6 +1,16 @@
 import { HTMLAttributes, forwardRef } from "react";
 
+/**
+ * Card container component with optional hover effect.
+ *
+ * @example
+ * ```tsx
+ * <Card hover={false}>Static content</Card>
+ * <Card className="p-8">Custom padding</Card>
+ * ```
+ */
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** Enable hover shadow effect (default: true) */
   hover?: boolean;
 }
 

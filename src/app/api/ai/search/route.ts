@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     const songs = await prisma.song.findMany({
       where: { status: "active" },
-      include: { artist: { select: { name: true } } },
+      include: { artist: { select: { id: true, name: true, walletAddress: true } } },
       take: 20,
     });
 
@@ -26,7 +26,15 @@ export async function POST(req: NextRequest) {
 
     const result = await enhanceSearch(query, normalized);
 
-    return successResponse(result);
+    // Return full song objects instead of just IDs for better performance
+    const matchedSongs = normalized.filter((s) =>
+      result.matchingSongIds.includes(s.id)
+    );
+
+    return successResponse({
+      ...result,
+      songs: matchedSongs,
+    });
   } catch {
     return errorResponse("Search failed", 500);
   }
