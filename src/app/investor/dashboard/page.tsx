@@ -5,6 +5,7 @@ import { Wallet, TrendingUp, Music, DollarSign, ArrowUpRight, Coins, Loader2, Sp
 import Link from "next/link";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { RecommendationCard } from "@/components/ai/RecommendationCard";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 interface Holding {
   song: {
@@ -33,7 +34,7 @@ interface DashboardData {
   holdings: Holding[];
 }
 
-export default function InvestorDashboard() {
+function InvestorDashboardContent() {
   const { address, isConnected } = useWallet();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -292,6 +293,14 @@ function StatCard({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InvestorDashboard() {
+  return (
+    <ErrorBoundary>
+      <InvestorDashboardContent />
+    </ErrorBoundary>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, LayoutGrid, List } from "lucide-react";
 import { SongCard } from "@/components/shared/SongCard";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 interface SongData {
   id: string;
@@ -18,7 +19,7 @@ interface SongData {
   artist?: { id: string; name: string; walletAddress: string };
 }
 
-export default function MarketplacePage() {
+function MarketplaceContent() {
   const [songs, setSongs] = useState<SongData[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
@@ -204,5 +205,13 @@ export default function MarketplacePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function MarketplacePage() {
+  return (
+    <ErrorBoundary>
+      <MarketplaceContent />
+    </ErrorBoundary>
   );
 }

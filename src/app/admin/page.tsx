@@ -15,8 +15,8 @@ import {
   Loader2,
   Activity,
   Database,
-  Clock,
 } from "lucide-react";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 interface AdminStats {
   totalArtists: number;
@@ -36,7 +36,7 @@ interface Song {
   artist: { name: string } | null;
 }
 
-export default function AdminPage() {
+function AdminContent() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
@@ -324,5 +324,13 @@ function StatCard({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <ErrorBoundary>
+      <AdminContent />
+    </ErrorBoundary>
   );
 }
