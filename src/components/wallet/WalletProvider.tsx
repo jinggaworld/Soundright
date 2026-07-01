@@ -35,14 +35,15 @@ interface WalletContextType extends WalletState {
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-/* ─── CSPR.click SDK Config ─────────────────────────── */
+/* ─── Casper Wallet Provider Helper ─────────────────── */
 
-const CSPRCLICK_APP_NAME =
-  process.env.NEXT_PUBLIC_CSPRCLICK_APP_NAME || "Soundright";
-const CSPRCLICK_SDK_URL =
-  "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
-const PRODUCTION_APP_ID =
-  process.env.NEXT_PUBLIC_CSPRCLICK_APP_ID || "2058ce6f-44f5-44c4-8eb5-80bc327f";
+function getCasperWalletProvider(): any {
+  if (typeof window === "undefined") return null;
+  // Casper Wallet extension injects window.CasperWalletProvider
+  const ProviderConstructor = (window as any).CasperWalletProvider;
+  if (typeof ProviderConstructor !== "function") return null;
+  return ProviderConstructor({ timeout: 30 * 60 * 1000 });
+}
 
 /* ─── Provider ──────────────────────────────────────── */
 
@@ -55,138 +56,64 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     sdkReady: false,
   });
 
-  const sdkRef = useRef<any>(null);
+  const providerRef = useRef<any>(null);
 
+  // Detect Casper Wallet extension availability
   useEffect(() => {
-    let cancelled = false;
+    const checkWallet = () => {
+      const provider = getCasperWalletProvider();
+      if (provider) {
+        providerRef.current = provider;
+        setState((prev) => ({ ...prev, sdkReady: true }));
+        console.log("Casper Wallet extension detected");
 
-    // Use csprclick-template for localhost dev (no domain registration needed)
-    // Use custom appId for production (registered at console.cspr.build)
-    const isDev = window.location.hostname === "localhost";
-    const appId = isDev ? "csprclick-template" : PRODUCTION_APP_ID;
-
-    // Set SDK options BEFORE loading the script
-    (window as any).clickSDKOptions = {
-      appId,
-      appName: CSPRCLICK_APP_NAME,
-      contentMode: "popup",
-      providers: [
-        "casper-wallet",
-        "ledger",
-        "metamask-snap",
-        "csprclick-w3a-google",
-        "walletconnect",
-      ],
-      jwt: false,
-      casperNode: "https://rpc.testnet.casperlabs.io",
-      chainName: "casper-test",
-      logLevel: 3,
-    };
-
-    (window as any).clickUIOptions = {
-      uiContainer: "csprclick-ui",
-    };
-
-    function onSdkReady() {
-      if (cancelled) return;
-      const csprclick = (window as any).csprclick;
-      if (!csprclick) {
-        console.warn(
-          "csprclick:loaded fired but window.csprclick is still null"
-        );
-        return;
+        // Check if already connected
+        provider
+          .isConnected()
+          .then((connected: boolean) => {
+            if (connected) {
+              return provider.getActivePublicKey();
+            }
+            return null;
+          })
+          .then((publicKey: string | null) => {
+            if (publicKey) {
+              return getBalance(publicKey).then((bal) => ({
+                publicKey,
+                bal,
+              }));
+            }
+            return null;
+          })
+          .then(
+            (result: { publicKey: string; bal: number } | null) => {
+              if (result) {
+                setState((prev) => ({
+                  ...prev,
+                  isConnected: true,
+                  address: result.publicKey,
+                  balance: result.bal,
+                }));
+              }
+            }
+          )
+          .catch(() => {});
+      } else {
+        // Retry after a short delay (extension might not be loaded yet)
+        setTimeout(checkWallet, 500);
       }
-
-      console.log("CSPR.click SDK ready (appId:", appId + ")");
-      sdkRef.current = csprclick;
-      setState((prev) => ({ ...prev, sdkReady: true }));
-
-      // Listen for account events
-      csprclick.on?.("csprclick:signed_in", async (account: any) => {
-        console.log("CSPR.click: signed in", account);
-        if (account?.publicKey && !cancelled) {
-          const bal = await getBalance(account.publicKey);
-          setState((prev) => ({
-            ...prev,
-            isConnected: true,
-            address: account.publicKey,
-            balance: bal,
-          }));
-        }
-      });
-
-      csprclick.on?.("csprclick:switched_account", async (account: any) => {
-        if (account?.publicKey && !cancelled) {
-          const bal = await getBalance(account.publicKey);
-          setState((prev) => ({
-            ...prev,
-            address: account.publicKey,
-            balance: bal,
-          }));
-        }
-      });
-
-      csprclick.on?.("csprclick:signed_out", () => {
-        setState((prev) => ({
-          ...prev,
-          isConnected: false,
-          address: null,
-          balance: null,
-        }));
-      });
-
-      // Check if already connected
-      csprclick
-        .getActiveAccountAsync?.({ withBalance: true })
-        .then((account: any) => {
-          if (account?.publicKey && !cancelled) {
-            const bal =
-              typeof account.liquid_balance === "string"
-                ? parseFloat(account.liquid_balance)
-                : Number(account.liquid_balance) || 0;
-            setState((prev) => ({
-              ...prev,
-              isConnected: true,
-              address: account.publicKey,
-              balance: bal,
-            }));
-          }
-        })
-        .catch(() => {});
-    }
-
-    // Listen for the csprclick:loaded event (SDK fires this when ready)
-    window.addEventListener("csprclick:loaded", onSdkReady);
-
-    // Also check if already available (script loaded before mount)
-    if ((window as any).csprclick) {
-      onSdkReady();
-    }
-
-    // Load the CDN script
-    if (!document.getElementById("csprclick-client")) {
-      const script = document.createElement("script");
-      script.id = "csprclick-client";
-      script.src = CSPRCLICK_SDK_URL;
-      script.async = true;
-      document.head.appendChild(script);
-    } else if ((window as any).csprclick) {
-      onSdkReady();
-    }
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("csprclick:loaded", onSdkReady);
     };
+
+    checkWallet();
   }, []);
 
   /* ─── Connect ───────────────────────────────────── */
 
   const connect = useCallback(async () => {
-    const csprclick = sdkRef.current || (window as any).csprclick;
-    if (!csprclick) {
+    const provider = providerRef.current || getCasperWalletProvider();
+    if (!provider) {
       alert(
-        "CSPR.click wallet selector is loading. Please wait and try again."
+        "Casper Wallet extension not detected!\n\nPlease install it from:\nhttps://chrome.google.com/webstore/detail/casper-wallet"
       );
       return;
     }
@@ -194,13 +121,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
-      const account = await csprclick.signIn();
-      if (account?.publicKey) {
-        const bal = await getBalance(account.publicKey);
+      const connected = await provider.requestConnection();
+      if (connected) {
+        const publicKey = await provider.getActivePublicKey();
+        const bal = await getBalance(publicKey);
         setState((prev) => ({
           ...prev,
           isConnected: true,
-          address: account.publicKey,
+          address: publicKey,
           balance: bal,
           isConnecting: false,
         }));
@@ -216,14 +144,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   /* ─── Disconnect ────────────────────────────────── */
 
   const disconnect = useCallback(async () => {
-    const csprclick = sdkRef.current || (window as any).csprclick;
-    try {
-      if (csprclick) {
-        csprclick.signOut?.();
-      }
-    } catch (error) {
-      console.error("Failed to disconnect:", error);
-    }
     setState((prev) => ({
       isConnected: false,
       address: null,
@@ -237,12 +157,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const signDeploy = useCallback(
     async (deploy: unknown) => {
-      const csprclick = sdkRef.current || (window as any).csprclick;
+      const provider = providerRef.current;
       if (!state.address) throw new Error("Wallet not connected");
-      if (!csprclick?.sign) throw new Error("CSPR.click SDK not ready");
-      const signingKey =
-        csprclick.getActiveAccount?.()?.publicKey || state.address;
-      return await csprclick.sign(deploy, signingKey);
+      if (!provider) throw new Error("Casper Wallet not available");
+
+      const deployJson =
+        typeof deploy === "string" ? deploy : JSON.stringify(deploy);
+      const result = await provider.sign(deployJson, state.address);
+      return result;
     },
     [state.address]
   );
@@ -256,9 +178,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       nonce: string;
       deadline: string;
     }) => {
-      const csprclick = sdkRef.current || (window as any).csprclick;
+      const provider = providerRef.current;
       if (!state.address) throw new Error("Wallet not connected");
-      if (!csprclick?.sign) throw new Error("CSPR.click SDK not ready");
+      if (!provider) throw new Error("Casper Wallet not available");
+
       const deploy = {
         payment: { amount: args.amount },
         session: { tag: "transfer" },
@@ -269,9 +192,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           ],
         },
       };
-      const signingKey =
-        csprclick.getActiveAccount?.()?.publicKey || state.address;
-      return await csprclick.sign(deploy, signingKey);
+      const deployJson = JSON.stringify(deploy);
+      return await provider.sign(deployJson, state.address);
     },
     [state.address]
   );
@@ -297,7 +219,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         refreshBalance,
       }}
     >
-      <div id="csprclick-ui" />
       {children}
     </WalletContext.Provider>
   );
