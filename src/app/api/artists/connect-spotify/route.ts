@@ -31,11 +31,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch Spotify profile and top tracks
-    const [profile, topTracks] = await Promise.all([
-      getArtistProfile(artistId),
-      getArtistTopTracks(artistId),
-    ]);
+    // Fetch Spotify profile (required) and top tracks (optional — needs Premium)
+    const profile = await getArtistProfile(artistId);
+    let topTracks = { tracks: [] as Record<string, unknown>[] };
+    try {
+      topTracks = await getArtistTopTracks(artistId);
+    } catch (trackError) {
+      console.warn("Top tracks unavailable (Premium required):", trackError);
+    }
 
     // Upsert artist record
     const artist = await prisma.artist.upsert({
@@ -56,8 +59,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Format top tracks for response
-    const tracks = topTracks.tracks.map((t: Record<string, unknown>) => {
+    // Format top tracks for response (empty array if unavailable)
+    const tracks = (topTracks.tracks || []).map((t: Record<string, unknown>) => {
       const album = t.album as Record<string, unknown> | undefined;
       const images = album?.images as Array<Record<string, unknown>> | undefined;
       return {
