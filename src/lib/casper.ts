@@ -1,10 +1,26 @@
 import { PublicKey, AccountIdentifier, RpcClient, HttpHandler } from "casper-js-sdk";
 
-const RPC_URL =
-  process.env.CASPER_RPC_URL || "https://rpc.testnet.casperlabs.io";
+const RPC_URLS = [
+  process.env.CASPER_RPC_URL,
+  "https://rpc.testnet.casperlabs.io",
+  "https://rpc.testnet.casperlabs.io/rpc",
+].filter(Boolean) as string[];
 
-const handler = new HttpHandler(RPC_URL);
-export const rpcClient = new RpcClient(handler);
+// Try each RPC endpoint until one works
+async function rpcWithFallback<T>(fn: (client: RpcClient) => Promise<T>): Promise<T> {
+  let lastError: Error | null = null;
+  for (const url of RPC_URLS) {
+    try {
+      const handler = new HttpHandler(url);
+      const client = new RpcClient(handler);
+      return await fn(client);
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`RPC endpoint ${url} failed, trying next...`);
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Get CSPR balance for a public key.
@@ -14,17 +30,20 @@ export async function getBalance(publicKeyHex: string): Promise<number> {
   try {
     const publicKey = PublicKey.fromHex(publicKeyHex);
     const accountId = new AccountIdentifier(undefined, publicKey);
-    const accountInfo = await rpcClient.getAccountInfo(null, accountId);
-    const purseURef = (accountInfo as any)?.account?.main_purse;
-    if (!purseURef) {
-      console.warn("No main_purse found for", publicKeyHex.slice(0, 10) + "...");
-      return 0;
-    }
-    const balance = await rpcClient.getLatestBalance(purseURef);
-    if (!balance) return 0;
-    return Number(balance) / 1_000_000_000;
+    const balance = await rpcWithFallback(async (client) => {
+      const accountInfo = await client.getAccountInfo(null, accountId);
+      const purseURef = (accountInfo as any)?.account?.main_purse;
+      if (!purseURef) {
+        console.warn("No main_purse found for", publicKeyHex.slice(0, 10) + "...");
+        return 0;
+      }
+      const bal = await client.getLatestBalance(purseURef);
+      if (!bal) return 0;
+      return Number(bal) / 1_000_000_000;
+    });
+    return balance;
   } catch (error) {
-    console.warn("getBalance failed for", publicKeyHex.slice(0, 10) + "...", error);
+    console.warn("getBalance failed (all RPC endpoints unreachable) for", publicKeyHex.slice(0, 10) + "...", error);
     return 0;
   }
 }
