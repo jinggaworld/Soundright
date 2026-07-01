@@ -43,9 +43,9 @@
    ========================================== */
 
 body {
-  background-color: var(--sr-black);
-  color: var(--text-base);
-  font-family: "SpotifyMixUI", "Helvetica Neue", helvetica, arial, sans-serif;
+  background-color: var(--color-sr-black);
+  color: var(--color-sr-text);
+  font-family: var(--font-spotify);
 }
 
 /* ==========================================
