@@ -23,6 +23,7 @@ interface WalletState {
 interface WalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => void;
+  switchAccount: () => Promise<void>;
   signDeploy: (deploy: unknown) => Promise<unknown>;
   signPayment: (args: {
     recipient: string;
@@ -170,6 +171,51 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  /* ─── Switch Account ───────────────────────────── */
+
+  const switchAccount = useCallback(async () => {
+    const provider = providerRef.current || getCasperWalletProvider();
+    if (!provider) return;
+
+    // First disconnect current session
+    await disconnect();
+
+    // Re-request connection — Casper Wallet will show the approval dialog
+    // If user switches account in the extension first, this will connect the new account
+    setState((prev) => ({ ...prev, isConnecting: true }));
+
+    try {
+      const connected = await provider.requestConnection();
+      if (connected) {
+        const publicKey = await provider.getActivePublicKey();
+        let bal: number | null = null;
+        try {
+          bal = await getBalance(publicKey);
+        } catch (e) {
+          console.warn("Could not fetch balance after switch:", e);
+        }
+        setState((prev) => ({
+          ...prev,
+          isConnected: true,
+          address: publicKey,
+          balance: bal,
+          isConnecting: false,
+        }));
+      } else {
+        setState((prev) => ({ ...prev, isConnecting: false }));
+      }
+    } catch (error: any) {
+      console.error("Failed to switch account:", error);
+      if (error?.code === 2) {
+        alert(
+          "Please switch to the desired account in Casper Wallet extension first,\n" +
+          "then click 'Switch Account' again."
+        );
+      }
+      setState((prev) => ({ ...prev, isConnecting: false }));
+    }
+  }, [disconnect]);
+
   /* ─── Sign Deploy ──────────────────────────────── */
 
   const signDeploy = useCallback(
@@ -235,6 +281,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         ...state,
         connect,
         disconnect,
+        switchAccount,
         signDeploy,
         signPayment,
         refreshBalance,
