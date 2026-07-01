@@ -8,7 +8,17 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { getBalance } from "@/lib/casper";
+/** Fetch balance via server-side API to avoid browser DNS/network issues */
+async function getBalance(address: string): Promise<number> {
+  try {
+    const res = await fetch(`/api/balance?address=${encodeURIComponent(address)}`);
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return data.balance ?? 0;
+  } catch {
+    return 0;
+  }
+}
 
 /* ─── Types ─────────────────────────────────────────── */
 
