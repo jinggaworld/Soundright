@@ -35,13 +35,50 @@ interface WalletContextType extends WalletState {
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-/* ─── CSPR.click config (read at runtime, not build) ── */
+/* ─── CSPR.click SDK Loader ─────────────────────────── */
 
-function getAppConfig() {
-  return {
-    appName: "Soundright",
-    appId: "2058ce6f-44f5-44c4-8eb5-80bc327f",
-  };
+const CSPRCLICK_APP_ID = "2058ce6f-44f5-44c4-8eb5-80bc327f";
+const CSPRCLICK_APP_NAME = "Soundright";
+const CSPRCLICK_SDK_URL =
+  "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
+
+function loadCsprClickScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Not in browser environment"));
+      return;
+    }
+
+    // Already loaded
+    if ((window as any).csprclick) {
+      resolve();
+      return;
+    }
+
+    // Check if script tag already exists
+    const existing = document.getElementById("csprclick-sdk");
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () =>
+        reject(new Error("Failed to load CSPR.click SDK from CDN"))
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "csprclick-sdk";
+    script.src = CSPRCLICK_SDK_URL;
+    script.async = true;
+
+    script.onload = () => {
+      // Wait a tick for SDK to initialize on window
+      setTimeout(resolve, 200);
+    };
+    script.onerror = () =>
+      reject(new Error("Failed to load CSPR.click SDK from CDN"));
+
+    document.head.appendChild(script);
+  });
 }
 
 /* ─── Provider ──────────────────────────────────────── */
@@ -57,89 +94,90 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const sdkRef = useRef<any>(null);
 
-  // Initialize CSPR.click SDK once it's available on window
+  // Load CSPR.click SDK script and initialize
   useEffect(() => {
     let cancelled = false;
-    let pollCount = 0;
-    const MAX_POLL = 50; // 5 seconds max
 
-    function tryInit() {
-      const csprclick = (window as any).csprclick;
-      if (!csprclick) {
-        pollCount++;
-        if (pollCount < MAX_POLL && !cancelled) {
-          setTimeout(tryInit, 100);
-        }
-        return;
-      }
-
-      if (cancelled) return;
-
-      // Initialize SDK with app config
+    async function initSdk() {
       try {
-        const config = getAppConfig();
-        csprclick.init({
-          appName: config.appName,
-          appId: config.appId,
-          contentMode: "popup",
-          providers: [
-            "casper-wallet",
-            "ledger",
-            "metamask-snap",
-            "csprclick-w3a-google",
-            "walletconnect",
-          ],
-          jwt: false,
-          logLevel: 3,
+        await loadCsprClickScript();
+
+        if (cancelled) return;
+
+        const csprclick = (window as any).csprclick;
+        if (!csprclick) {
+          console.error("CSPR.click SDK not found on window after script load");
+          return;
+        }
+
+        // Initialize SDK with app config
+        try {
+          csprclick.init({
+            appName: CSPRCLICK_APP_NAME,
+            appId: CSPRCLICK_APP_ID,
+            contentMode: "popup",
+            providers: [
+              "casper-wallet",
+              "ledger",
+              "metamask-snap",
+              "csprclick-w3a-google",
+              "walletconnect",
+            ],
+            jwt: false,
+            logLevel: 3,
+          });
+        } catch (e) {
+          // init() may have already been called
+          console.log("CSPR.click init:", e);
+        }
+
+        sdkRef.current = csprclick;
+        setState((prev) => ({ ...prev, sdkReady: true }));
+
+        // Listen for account events
+        csprclick.on?.("csprclick:signed_in", async (account: any) => {
+          console.log("CSPR.click: signed in", account);
+          if (account?.publicKey) {
+            const bal = await getBalance(account.publicKey);
+            if (!cancelled) {
+              setState((prev) => ({
+                ...prev,
+                isConnected: true,
+                address: account.publicKey,
+                balance: bal,
+              }));
+            }
+          }
         });
-      } catch (e) {
-        // init() may have already been called
-        console.log("CSPR.click init:", e);
-      }
 
-      sdkRef.current = csprclick;
-      setState((prev) => ({ ...prev, sdkReady: true }));
+        csprclick.on?.("csprclick:switched_account", async (account: any) => {
+          console.log("CSPR.click: switched account", account);
+          if (account?.publicKey) {
+            const bal = await getBalance(account.publicKey);
+            if (!cancelled) {
+              setState((prev) => ({
+                ...prev,
+                address: account.publicKey,
+                balance: bal,
+              }));
+            }
+          }
+        });
 
-      // Listen for account events
-      csprclick.on?.("csprclick:signed_in", async (account: any) => {
-        console.log("CSPR.click: signed in", account);
-        if (account?.publicKey) {
-          const bal = await getBalance(account.publicKey);
+        csprclick.on?.("csprclick:signed_out", () => {
+          console.log("CSPR.click: signed out");
           setState((prev) => ({
             ...prev,
-            isConnected: true,
-            address: account.publicKey,
-            balance: bal,
+            isConnected: false,
+            address: null,
+            balance: null,
           }));
-        }
-      });
+        });
 
-      csprclick.on?.("csprclick:switched_account", async (account: any) => {
-        console.log("CSPR.click: switched account", account);
-        if (account?.publicKey) {
-          const bal = await getBalance(account.publicKey);
-          setState((prev) => ({
-            ...prev,
-            address: account.publicKey,
-            balance: bal,
-          }));
-        }
-      });
-
-      csprclick.on?.("csprclick:signed_out", () => {
-        console.log("CSPR.click: signed out");
-        setState((prev) => ({
-          ...prev,
-          isConnected: false,
-          address: null,
-          balance: null,
-        }));
-      });
-
-      // Check if already connected
-      const activeAccount = csprclick.getActiveAccount?.();
-      if (activeAccount?.publicKey) {
-        getBalance(activeAccount.publicKey).then((bal) => {
+        // Check if already connected
+        const activeAccount = csprclick.getActiveAccount?.();
+        if (activeAccount?.publicKey) {
+          const bal = await getBalance(activeAccount.publicKey);
           if (!cancelled) {
             setState((prev) => ({
               ...prev,
@@ -148,12 +186,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
               balance: bal,
             }));
           }
-        });
+        }
+      } catch (error) {
+        console.error("Failed to load/init CSPR.click SDK:", error);
       }
     }
 
-    // Start polling for SDK availability
-    tryInit();
+    initSdk();
 
     return () => {
       cancelled = true;
@@ -166,7 +205,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const csprclick = sdkRef.current || (window as any).csprclick;
     if (!csprclick) {
       alert(
-        "CSPR.click wallet selector is loading.\n\nMake sure you have the CSPR.click extension installed, or refresh the page."
+        "CSPR.click wallet selector is loading.\n\nPlease wait a moment and try again."
       );
       return;
     }

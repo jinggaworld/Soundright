@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -7,10 +8,17 @@ const globalForPrisma = globalThis as unknown as {
 /**
  * Get the Prisma client instance. Lazy-initialized to avoid build-time failures
  * when DATABASE_URL is not available.
+ *
+ * Prisma 7 requires a driver adapter (PrismaPg) — no more built-in query engine.
  */
 export function getPrisma(): PrismaClient {
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient();
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("DATABASE_URL is not set in environment variables");
+    }
+    const adapter = new PrismaPg({ connectionString });
+    globalForPrisma.prisma = new PrismaClient({ adapter });
   }
   return globalForPrisma.prisma;
 }
