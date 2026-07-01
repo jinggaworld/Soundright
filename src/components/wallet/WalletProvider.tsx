@@ -40,6 +40,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 const CSPRCLICK_APP_NAME = "Soundright";
 const CSPRCLICK_SDK_URL =
   "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
+// Production appId registered at console.cspr.build
 const PRODUCTION_APP_ID = "2058ce6f-44f5-44c4-8eb5-80bc327f";
 
 /* ─── Provider ──────────────────────────────────────── */
@@ -59,7 +60,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     // Use csprclick-template for localhost dev (no domain registration needed)
-    const isDev = window.location.hostname === "localhost";
+    // Use custom appId for production (registered at console.cspr.build)
+    const isDev =
+      typeof window !== "undefined" && window.location.hostname === "localhost";
     const appId = isDev ? "csprclick-template" : PRODUCTION_APP_ID;
 
     // Set SDK options BEFORE loading the script
@@ -88,11 +91,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       const csprclick = (window as any).csprclick;
       if (!csprclick) {
-        console.warn("csprclick:loaded fired but window.csprclick is still null");
+        console.warn(
+          "csprclick:loaded fired but window.csprclick is still null"
+        );
         return;
       }
 
-      console.log("CSPR.click SDK loaded successfully");
+      console.log("CSPR.click SDK loaded successfully (appId:", appId + ")");
       sdkRef.current = csprclick;
       setState((prev) => ({ ...prev, sdkReady: true }));
 
@@ -113,28 +118,41 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       csprclick.on?.("csprclick:switched_account", async (account: any) => {
         if (account?.publicKey && !cancelled) {
           const bal = await getBalance(account.publicKey);
-          setState((prev) => ({ ...prev, address: account.publicKey, balance: bal }));
-        }
-      });
-
-      csprclick.on?.("csprclick:signed_out", () => {
-        setState((prev) => ({ ...prev, isConnected: false, address: null, balance: null }));
-      });
-
-      // Check if already connected
-      csprclick.getActiveAccountAsync?.({ withBalance: true }).then((account: any) => {
-        if (account?.publicKey && !cancelled) {
-          const bal = typeof account.liquid_balance === "string"
-            ? parseFloat(account.liquid_balance)
-            : Number(account.liquid_balance) || 0;
           setState((prev) => ({
             ...prev,
-            isConnected: true,
             address: account.publicKey,
             balance: bal,
           }));
         }
-      }).catch(() => {});
+      });
+
+      csprclick.on?.("csprclick:signed_out", () => {
+        setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          address: null,
+          balance: null,
+        }));
+      });
+
+      // Check if already connected
+      csprclick
+        .getActiveAccountAsync?.({ withBalance: true })
+        .then((account: any) => {
+          if (account?.publicKey && !cancelled) {
+            const bal =
+              typeof account.liquid_balance === "string"
+                ? parseFloat(account.liquid_balance)
+                : Number(account.liquid_balance) || 0;
+            setState((prev) => ({
+              ...prev,
+              isConnected: true,
+              address: account.publicKey,
+              balance: bal,
+            }));
+          }
+        })
+        .catch(() => {});
     }
 
     // Listen for the csprclick:loaded event (SDK fires this when ready)
@@ -168,7 +186,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const connect = useCallback(async () => {
     const csprclick = sdkRef.current || (window as any).csprclick;
     if (!csprclick) {
-      alert("CSPR.click wallet selector is loading. Please wait and try again.");
+      alert(
+        "CSPR.click wallet selector is loading. Please wait and try again."
+      );
       return;
     }
 
@@ -221,7 +241,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const csprclick = sdkRef.current || (window as any).csprclick;
       if (!state.address) throw new Error("Wallet not connected");
       if (!csprclick?.sign) throw new Error("CSPR.click SDK not ready");
-      const signingKey = csprclick.getActiveAccount?.()?.publicKey || state.address;
+      const signingKey =
+        csprclick.getActiveAccount?.()?.publicKey || state.address;
       return await csprclick.sign(deploy, signingKey);
     },
     [state.address]
@@ -230,16 +251,27 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   /* ─── Sign Payment ─────────────────────────────── */
 
   const signPayment = useCallback(
-    async (args: { recipient: string; amount: number; nonce: string; deadline: string }) => {
+    async (args: {
+      recipient: string;
+      amount: number;
+      nonce: string;
+      deadline: string;
+    }) => {
       const csprclick = sdkRef.current || (window as any).csprclick;
       if (!state.address) throw new Error("Wallet not connected");
       if (!csprclick?.sign) throw new Error("CSPR.click SDK not ready");
       const deploy = {
         payment: { amount: args.amount },
         session: { tag: "transfer" },
-        body: { args: [{ name: "amount", value: args.amount }, { name: "target", value: args.recipient }] },
+        body: {
+          args: [
+            { name: "amount", value: args.amount },
+            { name: "target", value: args.recipient },
+          ],
+        },
       };
-      const signingKey = csprclick.getActiveAccount?.()?.publicKey || state.address;
+      const signingKey =
+        csprclick.getActiveAccount?.()?.publicKey || state.address;
       return await csprclick.sign(deploy, signingKey);
     },
     [state.address]
@@ -257,7 +289,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ ...state, connect, disconnect, signDeploy, signPayment, refreshBalance }}
+      value={{
+        ...state,
+        connect,
+        disconnect,
+        signDeploy,
+        signPayment,
+        refreshBalance,
+      }}
     >
       <div id="csprclick-ui" />
       {children}
