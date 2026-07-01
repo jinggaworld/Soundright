@@ -11,7 +11,8 @@ export async function getBalance(address: string): Promise<number> {
     const balance = await rpcClient.getLatestBalance(address);
     if (!balance) return 0;
     return Number(balance) / 1_000_000_000;
-  } catch {
+  } catch (error) {
+    console.warn("getBalance failed for", address.slice(0, 10) + "...", error);
     return 0;
   }
 }

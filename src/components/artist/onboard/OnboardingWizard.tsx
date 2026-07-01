@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useWallet } from "@/components/wallet/WalletProvider";
 import { StepAccountSetup } from "./StepAccountSetup";
 import { StepConnectSpotify } from "./StepConnectSpotify";
 import { StepSelectSong } from "./StepSelectSong";
@@ -81,6 +82,14 @@ const STEP_COMPONENTS = [
 export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<OnboardingData>(INITIAL_DATA);
+  const { address, isConnected } = useWallet();
+
+  // Auto-populate walletAddress from connected wallet
+  useEffect(() => {
+    if (isConnected && address) {
+      setFormData((prev) => ({ ...prev, walletAddress: address }));
+    }
+  }, [isConnected, address]);
 
   const CurrentStepComponent = STEP_COMPONENTS[currentStep - 1];
 
