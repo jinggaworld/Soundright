@@ -1,4 +1,4 @@
-import { RpcClient, HttpHandler } from "casper-js-sdk";
+import { PublicKey, AccountIdentifier, RpcClient, HttpHandler } from "casper-js-sdk";
 
 const RPC_URL =
   process.env.CASPER_RPC_URL || "https://rpc.testnet.casperlabs.io";
@@ -6,13 +6,25 @@ const RPC_URL =
 const handler = new HttpHandler(RPC_URL);
 export const rpcClient = new RpcClient(handler);
 
-export async function getBalance(address: string): Promise<number> {
+/**
+ * Get CSPR balance for a public key.
+ * Fetches the account info to get the main purse URef, then queries balance.
+ */
+export async function getBalance(publicKeyHex: string): Promise<number> {
   try {
-    const balance = await rpcClient.getLatestBalance(address);
+    const publicKey = PublicKey.fromHex(publicKeyHex);
+    const accountId = new AccountIdentifier(undefined, publicKey);
+    const accountInfo = await rpcClient.getAccountInfo(null, accountId);
+    const purseURef = (accountInfo as any)?.account?.main_purse;
+    if (!purseURef) {
+      console.warn("No main_purse found for", publicKeyHex.slice(0, 10) + "...");
+      return 0;
+    }
+    const balance = await rpcClient.getLatestBalance(purseURef);
     if (!balance) return 0;
     return Number(balance) / 1_000_000_000;
   } catch (error) {
-    console.warn("getBalance failed for", address.slice(0, 10) + "...", error);
+    console.warn("getBalance failed for", publicKeyHex.slice(0, 10) + "...", error);
     return 0;
   }
 }
