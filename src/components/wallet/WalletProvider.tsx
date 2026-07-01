@@ -78,10 +78,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           })
           .then((publicKey: string | null) => {
             if (publicKey) {
-              return getBalance(publicKey).then((bal) => ({
-                publicKey,
-                bal,
-              }));
+              return getBalance(publicKey)
+                .catch(() => 0)
+                .then((bal) => ({ publicKey, bal }));
             }
             return null;
           })
@@ -124,7 +123,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const connected = await provider.requestConnection();
       if (connected) {
         const publicKey = await provider.getActivePublicKey();
-        const bal = await getBalance(publicKey);
+        let bal: number | null = null;
+        try {
+          bal = await getBalance(publicKey);
+        } catch (e) {
+          // Balance fetch may fail on testnet — continue without it
+          console.warn("Could not fetch balance, continuing anyway:", e);
+        }
         setState((prev) => ({
           ...prev,
           isConnected: true,
@@ -135,8 +140,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       } else {
         setState((prev) => ({ ...prev, isConnecting: false }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to connect wallet:", error);
+      // Casper Wallet error code 2 = active account not approved for this site
+      if (error?.code === 2) {
+        alert(
+          "The active account in Casper Wallet is not approved for this site.\n\n" +
+          "Please switch to the correct account in Casper Wallet,\n" +
+          "then click 'Connect Wallet' again.\n\n" +
+          "Steps:\n" +
+          "1. Open Casper Wallet extension\n" +
+          "2. Switch to the account you want to use\n" +
+          "3. Click Connect Wallet again"
+        );
+      }
       setState((prev) => ({ ...prev, isConnecting: false }));
     }
   }, []);
@@ -202,8 +219,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBalance = useCallback(async () => {
     if (!state.address) return;
-    const bal = await getBalance(state.address);
-    setState((prev) => ({ ...prev, balance: bal }));
+    try {
+      const bal = await getBalance(state.address);
+      setState((prev) => ({ ...prev, balance: bal }));
+    } catch (e) {
+      console.warn("Balance refresh failed:", e);
+    }
   }, [state.address]);
 
   /* ─── Render ───────────────────────────────────── */

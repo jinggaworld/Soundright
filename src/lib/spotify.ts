@@ -104,7 +104,7 @@ export function parseSpotifyArtistId(input: string): string | null {
   if (colonMatch) return colonMatch[1];
 
   const urlMatch = input.match(
-    /open\.spotify\.com\/artist\/([a-zA-Z0-9]+)/
+    /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?artist\/([a-zA-Z0-9]+)/
   );
   if (urlMatch) return urlMatch[1];
 
@@ -117,7 +117,7 @@ export function parseSpotifyTrackId(input: string): string | null {
   const colonMatch = input.match(/spotify:track:([a-zA-Z0-9]+)/);
   if (colonMatch) return colonMatch[1];
 
-  const urlMatch = input.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/);
+  const urlMatch = input.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/([a-zA-Z0-9]+)/);
   if (urlMatch) return urlMatch[1];
 
   if (/^[a-zA-Z0-9]{22}$/.test(input)) return input;
