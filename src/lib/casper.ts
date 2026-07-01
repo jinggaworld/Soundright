@@ -3,7 +3,6 @@ import { PublicKey, AccountIdentifier, RpcClient, HttpHandler } from "casper-js-
 const RPC_URLS = [
   process.env.CASPER_RPC_URL,
   "https://rpc.testnet.casperlabs.io",
-  "https://rpc.testnet.casperlabs.io/rpc",
 ].filter(Boolean) as string[];
 
 // Try each RPC endpoint until one works
