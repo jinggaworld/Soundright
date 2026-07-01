@@ -37,10 +37,10 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 /* ─── CSPR.click SDK Config ─────────────────────────── */
 
-const CSPRCLICK_APP_ID = "2058ce6f-44f5-44c4-8eb5-80bc327f";
 const CSPRCLICK_APP_NAME = "Soundright";
 const CSPRCLICK_SDK_URL =
   "https://cdn.cspr.click/ui/v2.1.0/csprclick-client-2.1.0.js";
+const PRODUCTION_APP_ID = "2058ce6f-44f5-44c4-8eb5-80bc327f";
 
 /* ─── Provider ──────────────────────────────────────── */
 
@@ -58,9 +58,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Use csprclick-template for localhost dev (no domain registration needed)
+    const isDev = window.location.hostname === "localhost";
+    const appId = isDev ? "csprclick-template" : PRODUCTION_APP_ID;
+
     // Set SDK options BEFORE loading the script
     (window as any).clickSDKOptions = {
-      appId: CSPRCLICK_APP_ID,
+      appId,
       appName: CSPRCLICK_APP_NAME,
       contentMode: "popup",
       providers: [
